@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="description" content="Kırılgan Geçit - Refleks ve şekil tanıma oyunu">
+    <title>Kırılgan Geçit</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <!-- Welcome Screen (First Time) -->
+    <div id="welcomeScreen" class="screen">
+        <div class="glass-panel welcome-panel">
+            <h1>🔷 Kırılgan Geçit</h1>
+            <p class="subtitle">Hoş geldin! Adını gir:</p>
+            <input type="text" id="playerNameInput" class="name-input" placeholder="Oyuncu adı..." maxlength="15">
+            <button id="saveNameBtn" class="btn-play">Başla</button>
+        </div>
+    </div>
+
+    <!-- Main Menu Screen -->
+    <div id="menuScreen" class="screen hidden">
+        <div class="menu-container">
+            <div class="menu-header">
+                <h1>🔷 Kırılgan Geçit</h1>
+                <p class="welcome-text">Hoş geldin, <span id="playerNameDisplay">Oyuncu</span>! 👋</p>
+                <div class="menu-stats">
+                    <div class="high-score-badge">
+                        <span class="hs-label">En Yüksek Puan</span>
+                        <span id="menuHighScore" class="hs-value">0</span>
+                    </div>
+                    <div class="token-badge">
+                        <span class="token-icon">🪙</span>
+                        <span id="menuTokens" class="token-value">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="menu-buttons">
+                <button id="playBtn" class="menu-btn play-btn">
+                    <span class="btn-icon">🎮</span>
+                    <span class="btn-text">Oyna</span>
+                </button>
+                <div class="menu-row">
+                    <button id="leaderboardBtn" class="menu-btn secondary-btn">
+                        <span class="btn-icon">🏆</span>
+                        <span class="btn-text">Sıralama</span>
+                    </button>
+                    <button id="settingsBtn" class="menu-btn secondary-btn">
+                        <span class="btn-icon">⚙️</span>
+                        <span class="btn-text">Ayarlar</span>
+                    </button>
+                </div>
+                <button id="marketBtn" class="menu-btn market-btn">
+                    <span class="btn-icon">🛒</span>
+                    <span class="btn-text">Market</span>
+                    <span class="coming-soon">Yakında</span>
+                </button>
+                <button id="switchUserBtn" class="menu-btn switch-user-btn">
+                    <span class="btn-icon">👤</span>
+                    <span class="btn-text">Kullanıcı Değiştir</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leaderboard Screen -->
+    <div id="leaderboardScreen" class="screen hidden">
+        <div class="glass-panel leaderboard-panel">
+            <div class="panel-header">
+                <button class="back-btn" data-target="menu">←</button>
+                <h2>🏆 Liderlik Tablosu</h2>
+            </div>
+            <div id="leaderboardList" class="leaderboard-list">
+                <!-- Filled by JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Screen -->
+    <div id="settingsScreen" class="screen hidden">
+        <div class="glass-panel settings-panel">
+            <div class="panel-header">
+                <button class="back-btn" data-target="menu">←</button>
+                <h2>⚙️ Ayarlar</h2>
+            </div>
+            <div class="settings-list">
+                <div class="setting-item">
+                    <span class="setting-label">🔊 Ses Efektleri</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="soundToggle" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                <div class="setting-item">
+                    <span class="setting-label">🎯 Hassasiyet</span>
+                    <div class="slider-container">
+                        <input type="range" id="sensitivitySlider" min="0.5" max="2" step="0.1" value="1">
+                        <span id="sensitivityValue" class="slider-value">1.0x</span>
+                    </div>
+                </div>
+                <div class="setting-item">
+                    <span class="setting-label">👤 Oyuncu Adı</span>
+                    <input type="text" id="changeNameInput" class="setting-input" maxlength="15">
+                </div>
+                <button id="saveSettingsBtn" class="btn-save">Kaydet</button>
+                <div class="setting-item danger">
+                    <span class="setting-label">🗑️ Verileri Sıfırla</span>
+                    <button id="resetDataBtn" class="btn-danger">Sıfırla</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Market Screen -->
+    <div id="marketScreen" class="screen hidden">
+        <div class="glass-panel market-panel">
+            <div class="panel-header">
+                <button class="back-btn" data-target="menu">←</button>
+                <h2>🛒 Market</h2>
+                <div class="market-token-badge">
+                    <span class="token-icon">🪙</span>
+                    <span id="marketTokens">0</span>
+                </div>
+            </div>
+
+            <div class="market-tabs">
+                <button class="market-tab active" data-tab="customize">🎨 Özelleştir</button>
+                <button class="market-tab" data-tab="powerups">⚡ Güçler</button>
+            </div>
+
+            <div id="customizeTab" class="market-content">
+                <!-- Frame Colors -->
+                <div class="market-section">
+                    <h3>🖼️ Çerçeve Renkleri</h3>
+                    <div id="frameColorItems" class="market-items"></div>
+                </div>
+
+                <!-- Shape Colors -->
+                <div class="market-section">
+                    <h3>◆ Şekil Renkleri</h3>
+                    <div id="shapeColorItems" class="market-items"></div>
+                </div>
+
+                <!-- Patterns -->
+                <div class="market-section">
+                    <h3>🎨 Desenler</h3>
+                    <div id="patternItems" class="market-items"></div>
+                </div>
+            </div>
+
+            <div id="powerupsTab" class="market-content hidden">
+                <p class="powerup-hint">💡 Oyun içinde klavye tuşlarıyla kullan!</p>
+                <div id="powerUpItems" class="market-items powerup-grid"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Screen -->
+    <div id="gameScreen" class="screen hidden">
+        <div id="scoreDisplay" class="score-display">
+            <span class="score-label">Puan</span>
+            <span id="score" class="score-value">0</span>
+        </div>
+
+        <!-- High Score Notification -->
+        <div id="hsNotification" class="hs-notification hidden">
+            <span id="hsNotificationText"></span>
+        </div>
+
+        <!-- Active Power-up Display -->
+        <div id="powerUpDisplay" class="powerup-display hidden">
+            <span id="powerUpIcon" class="powerup-icon"></span>
+            <div id="powerUpBar" class="powerup-bar">
+                <div id="powerUpProgress" class="powerup-progress"></div>
+            </div>
+        </div>
+
+        <!-- Power-up Inventory Bar -->
+        <div id="inventoryBar" class="inventory-bar">
+            <div class="inv-item" data-powerup="slowmo" data-key="1">
+                <span class="inv-key">1</span>
+                <span class="inv-icon">🐌</span>
+                <span class="inv-count" id="invSlowmo">0</span>
+            </div>
+            <div class="inv-item" data-powerup="shrink" data-key="2">
+                <span class="inv-key">2</span>
+                <span class="inv-icon">⬇️</span>
+                <span class="inv-count" id="invShrink">0</span>
+            </div>
+            <div class="inv-item" data-powerup="frameChange" data-key="3">
+                <span class="inv-key">3</span>
+                <span class="inv-icon">🔄</span>
+                <span class="inv-count" id="invFrameChange">0</span>
+            </div>
+            <div class="inv-item" data-powerup="shield" data-key="4">
+                <span class="inv-key">4</span>
+                <span class="inv-icon">🛡️</span>
+                <span class="inv-count" id="invShield">0</span>
+            </div>
+            <div class="inv-item" data-powerup="golden" data-key="5">
+                <span class="inv-key">5</span>
+                <span class="inv-icon">✨</span>
+                <span class="inv-count" id="invGolden">0</span>
+            </div>
+            <div class="inv-item" data-powerup="expand" data-key="6">
+                <span class="inv-key">6</span>
+                <span class="inv-icon">⬆️</span>
+                <span class="inv-count" id="invExpand">0</span>
+            </div>
+        </div>
+
+        <!-- Pause Button -->
+        <button id="pauseBtn" class="pause-btn">⏸️</button>
+
+        <canvas id="gameCanvas"></canvas>
+    </div>
+
+    <!-- Pause Screen -->
+    <div id="pauseScreen" class="screen hidden">
+        <div class="glass-panel pause-panel">
+            <h2>⏸️ Duraklatıldı</h2>
+            <div class="pause-buttons">
+                <button id="resumeBtn" class="btn-play">Devam Et</button>
+                <button id="quitBtn" class="btn-secondary">Ana Menü</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Over Screen -->
+    <div id="gameOverScreen" class="screen hidden">
+        <div class="glass-panel game-over-panel">
+            <div class="shatter-icon">💔</div>
+            <h2>Cam Kırıldı!</h2>
+            <p class="final-score-label">Puanın</p>
+            <p id="finalScore" class="final-score">0</p>
+            <div class="earned-tokens">
+                <span class="token-icon">🪙</span>
+                <span id="earnedTokens" class="token-earned">+0</span>
+            </div>
+            <div class="game-over-buttons">
+                <button id="continueBtn" class="btn-continue">
+                    <span>Devam Et</span>
+                    <span class="continue-cost">🪙 <span id="continueCost">50</span></span>
+                </button>
+                <button id="restartBtn" class="btn-play">Tekrar Oyna</button>
+                <button id="menuBtn" class="btn-secondary">Ana Menü</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- New High Score Screen -->
+    <div id="newHighScoreScreen" class="screen hidden">
+        <div class="glass-panel highscore-panel">
+            <div class="confetti-container">
+                <div class="confetti"></div>
+                <div class="confetti"></div>
+                <div class="confetti"></div>
+                <div class="confetti"></div>
+                <div class="confetti"></div>
+            </div>
+            <div class="crown-icon">👑</div>
+            <h2>YENİ REKOR!</h2>
+            <p id="newHighScoreValue" class="new-hs-value">0</p>
+            <div class="earned-tokens">
+                <span class="token-icon">🪙</span>
+                <span id="hsEarnedTokens" class="token-earned">+0</span>
+            </div>
+            <p class="hs-congrats">Tebrikler, <span id="hsPlayerName">Oyuncu</span>!</p>
+            <div class="hs-buttons">
+                <button id="hsContinueBtn" class="btn-continue">
+                    <span>Devam Et</span>
+                    <span class="continue-cost">🪙 <span id="hsContinueCost">50</span></span>
+                </button>
+                <button id="hsPlayAgainBtn" class="btn-play">Tekrar Oyna</button>
+                <button id="hsMenuBtn" class="btn-secondary">Ana Menü</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+
+</html>
