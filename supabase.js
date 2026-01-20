@@ -128,23 +128,24 @@ async function updateLeaderboardEntry(playerName, score) {
 
     try {
         // First check if entry exists and get current score
-        const { data: existing } = await supabaseClient
+        const { data: existing, error: fetchError } = await supabaseClient
             .from('leaderboard')
             .select('score')
             .eq('name', playerName)
             .single();
 
-        // Only update if new score is higher or no entry exists
-        if (existing && existing.score >= score) {
-            return true; // No update needed
+        // If entry exists and score is not higher, no update needed
+        if (!fetchError && existing && existing.score >= score) {
+            console.log('Leaderboard: existing score is higher, no update needed');
+            return true;
         }
 
+        // Insert or update the leaderboard entry
         const { error } = await supabaseClient
             .from('leaderboard')
             .upsert({
                 name: playerName,
-                score: score,
-                updated_at: new Date().toISOString()
+                score: score
             }, {
                 onConflict: 'name'
             });
@@ -154,6 +155,7 @@ async function updateLeaderboardEntry(playerName, score) {
             return false;
         }
 
+        console.log('Leaderboard updated successfully for:', playerName, 'score:', score);
         return true;
     } catch (err) {
         console.error('Exception updating leaderboard:', err);
