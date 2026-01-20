@@ -37,6 +37,7 @@ class Game {
         this.highScore = 0;
         this.soundEnabled = true;
         this.leaderboard = [];
+        this.supabaseReady = false; // Will be set to true if Supabase initializes successfully
 
         // Token System
         this.tokens = 0;
@@ -57,24 +58,24 @@ class Game {
         this.marketItems = {
             frameColors: [
                 { id: 'default', name: 'Varsayılan', color: 'rgba(150, 200, 255, 0.25)', borderColor: 'rgba(200, 230, 255, 0.5)', price: 0 },
-                { id: 'neon-cyan', name: 'Neon Mavi', color: 'rgba(0, 212, 255, 0.35)', borderColor: 'rgba(0, 212, 255, 0.7)', price: 0 },
-                { id: 'neon-purple', name: 'Neon Mor', color: 'rgba(168, 85, 247, 0.35)', borderColor: 'rgba(168, 85, 247, 0.7)', price: 0 },
-                { id: 'neon-pink', name: 'Neon Pembe', color: 'rgba(236, 72, 153, 0.35)', borderColor: 'rgba(236, 72, 153, 0.7)', price: 0 },
-                { id: 'golden', name: 'Altın', color: 'rgba(255, 215, 0, 0.35)', borderColor: 'rgba(255, 215, 0, 0.7)', price: 0 },
-                { id: 'emerald', name: 'Zümrüt', color: 'rgba(34, 197, 94, 0.35)', borderColor: 'rgba(34, 197, 94, 0.7)', price: 0 }
+                { id: 'neon-cyan', name: 'Neon Mavi', color: 'rgba(0, 212, 255, 0.35)', borderColor: 'rgba(0, 212, 255, 0.7)', price: 100 },
+                { id: 'neon-purple', name: 'Neon Mor', color: 'rgba(168, 85, 247, 0.35)', borderColor: 'rgba(168, 85, 247, 0.7)', price: 100 },
+                { id: 'neon-pink', name: 'Neon Pembe', color: 'rgba(236, 72, 153, 0.35)', borderColor: 'rgba(236, 72, 153, 0.7)', price: 100 },
+                { id: 'golden', name: 'Altın', color: 'rgba(255, 215, 0, 0.35)', borderColor: 'rgba(255, 215, 0, 0.7)', price: 200 },
+                { id: 'emerald', name: 'Zümrüt', color: 'rgba(34, 197, 94, 0.35)', borderColor: 'rgba(34, 197, 94, 0.7)', price: 200 }
             ],
             shapeColors: [
                 { id: 'default', name: 'Varsayılan', colors: null, price: 0 },
-                { id: 'neon', name: 'Neon', colors: { circle: '#00ffff', square: '#ff00ff', star: '#ffff00' }, price: 0 },
-                { id: 'pastel', name: 'Pastel', colors: { circle: '#a8e6cf', square: '#dda0dd', star: '#ffd3b6' }, price: 0 },
-                { id: 'fire', name: 'Ateş', colors: { circle: '#ff4500', square: '#ff6347', star: '#ffa500' }, price: 0 },
-                { id: 'ice', name: 'Buz', colors: { circle: '#87ceeb', square: '#b0e0e6', star: '#e0ffff' }, price: 0 }
+                { id: 'neon', name: 'Neon', colors: { circle: '#00ffff', square: '#ff00ff', star: '#ffff00' }, price: 100 },
+                { id: 'pastel', name: 'Pastel', colors: { circle: '#a8e6cf', square: '#dda0dd', star: '#ffd3b6' }, price: 150 },
+                { id: 'fire', name: 'Ateş', colors: { circle: '#ff4500', square: '#ff6347', star: '#ffa500' }, price: 180 },
+                { id: 'ice', name: 'Buz', colors: { circle: '#87ceeb', square: '#b0e0e6', star: '#e0ffff' }, price: 180 }
             ],
             patterns: [
                 { id: 'solid', name: 'Düz', price: 0 },
-                { id: 'striped', name: 'Çizgili', price: 0 },
-                { id: 'dotted', name: 'Noktalı', price: 0 },
-                { id: 'gradient', name: 'Gradyan', price: 0 }
+                { id: 'striped', name: 'Çizgili', price: 100 },
+                { id: 'dotted', name: 'Noktalı', price: 80 },
+                { id: 'gradient', name: 'Gradyan', price: 120 }
             ],
             powerUps: [
                 { id: 'slowmo', name: 'Ağır Çekim', icon: '🐌', price: 35, key: '1' },
@@ -172,7 +173,7 @@ class Game {
     }
 
     // ============================================
-    // LOCAL STORAGE - NAME-BASED SAVES
+    // DATA PERSISTENCE - SUPABASE + LOCALSTORAGE
     // ============================================
 
     // Get storage key prefix for current player
@@ -180,27 +181,37 @@ class Game {
         return this.playerName ? `player_${this.playerName}_${key}` : key;
     }
 
+    // Initialize Supabase connection
+    initDatabase() {
+        if (window.SupabaseDB) {
+            this.supabaseReady = window.SupabaseDB.init();
+        } else {
+            this.supabaseReady = false;
+        }
+        console.log('Database ready:', this.supabaseReady ? 'Supabase' : 'localStorage only');
+    }
+
     loadPlayerData() {
-        // Only load name and global settings initially
+        // Load local settings immediately (sync)
         this.playerName = localStorage.getItem('lastPlayerName') || '';
         this.soundEnabled = localStorage.getItem('soundEnabled') !== 'false';
         this.sensitivity = parseFloat(localStorage.getItem('sensitivity')) || 1.0;
 
-        // Load leaderboard (global)
+        // Load local leaderboard as cache
         try {
             this.leaderboard = JSON.parse(localStorage.getItem('leaderboard')) || [];
         } catch {
             this.leaderboard = [];
         }
 
-        // If we have a player name, load their specific data
+        // If we have a player name, load their specific data from localStorage first
         if (this.playerName) {
-            this.loadPlayerSpecificData();
+            this.loadPlayerSpecificDataFromLocal();
         }
     }
 
-    // Load data specific to current player name
-    loadPlayerSpecificData() {
+    // Load data from localStorage (sync, used as cache)
+    loadPlayerSpecificDataFromLocal() {
         this.highScore = parseInt(localStorage.getItem(this.getStorageKey('highScore'))) || 0;
         this.tokens = parseInt(localStorage.getItem(this.getStorageKey('tokens'))) || 0;
 
@@ -221,12 +232,41 @@ class Game {
         this.activePattern = localStorage.getItem(this.getStorageKey('activePattern')) || 'solid';
     }
 
-    // Switch to a different player (or new player)
-    switchPlayer(name) {
+    // Load player data from Supabase (async)
+    async loadPlayerFromCloud(name) {
+        if (!this.supabaseReady) return null;
+
+        try {
+            const cloudData = await window.SupabaseDB.fetchPlayer(name);
+            if (cloudData) {
+                // Update local state with cloud data
+                this.highScore = cloudData.high_score || 0;
+                this.tokens = cloudData.tokens || 0;
+                this.ownedFrameColors = cloudData.owned_frame_colors || ['default'];
+                this.ownedShapeColors = cloudData.owned_shape_colors || ['default'];
+                this.ownedPatterns = cloudData.owned_patterns || ['solid'];
+                this.powerUpInventory = cloudData.power_up_inventory || { shield: 0, golden: 0, expand: 0, shrink: 0, slowmo: 0, frameChange: 0 };
+                this.activeFrameColor = cloudData.active_frame_color || 'default';
+                this.activeShapeColor = cloudData.active_shape_color || 'default';
+                this.activePattern = cloudData.active_pattern || 'solid';
+
+                // Update localStorage cache
+                this.savePlayerDataToLocal();
+                return true;
+            }
+            return false;
+        } catch (err) {
+            console.error('Error loading from cloud:', err);
+            return false;
+        }
+    }
+
+    // Switch to a different player (async with Supabase)
+    async switchPlayer(name) {
         this.playerName = name;
         localStorage.setItem('lastPlayerName', name);
 
-        // Reset to defaults then load player-specific data
+        // Reset to defaults
         this.highScore = 0;
         this.tokens = 0;
         this.ownedFrameColors = ['default'];
@@ -237,18 +277,27 @@ class Game {
         this.activeShapeColor = 'default';
         this.activePattern = 'solid';
 
-        // Load existing data if this player exists
-        this.loadPlayerSpecificData();
+        // Try to load from cloud first
+        const cloudLoaded = await this.loadPlayerFromCloud(name);
+
+        if (!cloudLoaded) {
+            // Fall back to localStorage
+            this.loadPlayerSpecificDataFromLocal();
+
+            // If this is a new player and Supabase is ready, create them in the cloud
+            if (this.supabaseReady) {
+                await this.savePlayerDataToCloud();
+            }
+        }
     }
 
-    savePlayerData() {
-        // Save global settings
+    // Save to localStorage (sync, immediate)
+    savePlayerDataToLocal() {
         localStorage.setItem('lastPlayerName', this.playerName);
         localStorage.setItem('soundEnabled', this.soundEnabled.toString());
         localStorage.setItem('sensitivity', this.sensitivity.toString());
         localStorage.setItem('leaderboard', JSON.stringify(this.leaderboard));
 
-        // Save player-specific data
         if (this.playerName) {
             localStorage.setItem(this.getStorageKey('highScore'), this.highScore.toString());
             localStorage.setItem(this.getStorageKey('tokens'), this.tokens.toString());
@@ -262,8 +311,40 @@ class Game {
         }
     }
 
-    updateLeaderboard(name, score) {
-        // Find existing entry or create new
+    // Save to Supabase (async, background)
+    async savePlayerDataToCloud() {
+        if (!this.supabaseReady || !this.playerName) return;
+
+        try {
+            await window.SupabaseDB.savePlayer({
+                name: this.playerName,
+                highScore: this.highScore,
+                tokens: this.tokens,
+                ownedFrameColors: this.ownedFrameColors,
+                ownedShapeColors: this.ownedShapeColors,
+                ownedPatterns: this.ownedPatterns,
+                powerUpInventory: this.powerUpInventory,
+                activeFrameColor: this.activeFrameColor,
+                activeShapeColor: this.activeShapeColor,
+                activePattern: this.activePattern
+            });
+        } catch (err) {
+            console.error('Error saving to cloud:', err);
+        }
+    }
+
+    // Main save function - saves to both localStorage and cloud
+    savePlayerData() {
+        // Always save to localStorage immediately
+        this.savePlayerDataToLocal();
+
+        // Save to cloud in background (don't await)
+        this.savePlayerDataToCloud();
+    }
+
+    // Update leaderboard (both local and cloud)
+    async updateLeaderboard(name, score) {
+        // Update local leaderboard
         const existingIndex = this.leaderboard.findIndex(e => e.name === name);
         if (existingIndex >= 0) {
             if (score > this.leaderboard[existingIndex].score) {
@@ -273,10 +354,31 @@ class Game {
             this.leaderboard.push({ name, score });
         }
 
-        // Sort and limit to top 10
         this.leaderboard.sort((a, b) => b.score - a.score);
         this.leaderboard = this.leaderboard.slice(0, 10);
-        this.savePlayerData();
+        this.savePlayerDataToLocal();
+
+        // Update cloud leaderboard
+        if (this.supabaseReady) {
+            await window.SupabaseDB.updateLeaderboardEntry(name, score);
+        }
+    }
+
+    // Fetch global leaderboard from cloud
+    async fetchGlobalLeaderboard() {
+        if (!this.supabaseReady) return this.leaderboard;
+
+        try {
+            const cloudLeaderboard = await window.SupabaseDB.fetchLeaderboard();
+            if (cloudLeaderboard) {
+                this.leaderboard = cloudLeaderboard;
+                localStorage.setItem('leaderboard', JSON.stringify(this.leaderboard));
+                return cloudLeaderboard;
+            }
+        } catch (err) {
+            console.error('Error fetching leaderboard:', err);
+        }
+        return this.leaderboard;
     }
 
     resetAllData() {
@@ -458,9 +560,9 @@ class Game {
             document.getElementById('sensitivityValue').textContent = this.sensitivity.toFixed(1) + 'x';
         }
 
-        // Update leaderboard
+        // Update leaderboard (fetch from cloud if available)
         if (screenName === 'leaderboard') {
-            this.renderLeaderboard();
+            this.renderLeaderboardWithLoading();
         }
 
         // Render market
@@ -490,6 +592,20 @@ class Game {
         }).join('');
     }
 
+    // Render leaderboard with cloud fetch and loading state
+    async renderLeaderboardWithLoading() {
+        const list = document.getElementById('leaderboardList');
+
+        // Show loading state
+        list.innerHTML = '<div class="empty-leaderboard">Yükleniyor... ⏳</div>';
+
+        // Fetch from cloud
+        await this.fetchGlobalLeaderboard();
+
+        // Render the leaderboard
+        this.renderLeaderboard();
+    }
+
     // ============================================
     // INITIALIZATION
     // ============================================
@@ -497,22 +613,44 @@ class Game {
     init() {
         this.resizeCanvas();
         this.initStars();
+        this.initDatabase(); // Initialize Supabase
         window.addEventListener('resize', () => this.resizeCanvas());
 
         // Check if first time
         if (!this.playerName) {
             this.showScreen('welcome');
         } else {
-            this.showScreen('menu');
+            // Try to sync with cloud on startup
+            if (this.supabaseReady) {
+                this.loadPlayerFromCloud(this.playerName).then(() => {
+                    this.showScreen('menu');
+                });
+            } else {
+                this.showScreen('menu');
+            }
         }
 
         // Welcome screen
-        document.getElementById('saveNameBtn').addEventListener('click', () => {
+        document.getElementById('saveNameBtn').addEventListener('click', async () => {
             const name = document.getElementById('playerNameInput').value.trim();
             if (name) {
-                this.switchPlayer(name); // Use switchPlayer for name-based saves
-                this.savePlayerData();
-                this.showScreen('menu');
+                // Show loading state
+                const btn = document.getElementById('saveNameBtn');
+                const originalText = btn.textContent;
+                btn.textContent = 'Yükleniyor...';
+                btn.disabled = true;
+
+                try {
+                    await this.switchPlayer(name);
+                    this.savePlayerData();
+                    this.showScreen('menu');
+                } catch (err) {
+                    console.error('Error switching player:', err);
+                    this.showScreen('menu');
+                } finally {
+                    btn.textContent = originalText;
+                    btn.disabled = false;
+                }
             }
         });
 
