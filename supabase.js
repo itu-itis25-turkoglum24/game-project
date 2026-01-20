@@ -102,7 +102,7 @@ async function fetchLeaderboard() {
     try {
         const { data, error } = await supabaseClient
             .from('leaderboard')
-            .select('name, score')
+            .select('*')
             .order('score', { ascending: false })
             .limit(10);
 
@@ -110,6 +110,8 @@ async function fetchLeaderboard() {
             console.error('Error fetching leaderboard:', error);
             return null;
         }
+
+        console.log('Leaderboard fetched:', data);
 
         // Transform to match local format
         return data.map(entry => ({
