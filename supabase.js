@@ -102,7 +102,7 @@ async function fetchLeaderboard() {
     try {
         const { data, error } = await supabaseClient
             .from('leaderboard')
-            .select('player_name, score')
+            .select('name, score')
             .order('score', { ascending: false })
             .limit(10);
 
@@ -113,7 +113,7 @@ async function fetchLeaderboard() {
 
         // Transform to match local format
         return data.map(entry => ({
-            name: entry.player_name,
+            name: entry.name,
             score: entry.score
         }));
     } catch (err) {
@@ -131,7 +131,7 @@ async function updateLeaderboardEntry(playerName, score) {
         const { data: existing } = await supabaseClient
             .from('leaderboard')
             .select('score')
-            .eq('player_name', playerName)
+            .eq('name', playerName)
             .single();
 
         // Only update if new score is higher or no entry exists
@@ -142,11 +142,11 @@ async function updateLeaderboardEntry(playerName, score) {
         const { error } = await supabaseClient
             .from('leaderboard')
             .upsert({
-                player_name: playerName,
+                name: playerName,
                 score: score,
                 updated_at: new Date().toISOString()
             }, {
-                onConflict: 'player_name'
+                onConflict: 'name'
             });
 
         if (error) {
